@@ -92,6 +92,25 @@ SELECT
 FROM fact_feature_metrics;
 ```
 
+## Pipeline Orchestration
+
+The system implements a modular, production-style data pipeline with clearly separated execution layers:
+
+- Ingestion Layer — loads raw telemetry data
+- Validation Layer — enforces schema consistency and data quality checks
+- Feature Engineering Layer — computes derived metrics and quality signals
+- Aggregation Layer — produces daily feature-level aggregates
+- ML Scoring Layer — generates predicted risk probabilities
+
+The pipeline is orchestrated through a single execution entry point (`run_pipeline.py`) and is designed to be:
+
+- Stateless
+- Idempotent
+- Batch-execution ready
+- Easily extendable to distributed processing frameworks (e.g., Spark)
+
+This structure mirrors real-world analytics engineering systems rather than notebook-based experimentation.
+
 ## Example Insights Produced
 
 - Increasing latency combined with declining feedback indicates early user experience degradation
