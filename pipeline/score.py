@@ -1,50 +1,66 @@
+import pandas as pd
+import joblib
+import logging
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-import logging
+from sklearn.metrics import roc_auc_score
 
 logger = logging.getLogger(__name__)
 
-def create_target(df):
+
+# ---------------------------------------------------
+# Create Target Variable
+# ---------------------------------------------------
+def create_target(df: pd.DataFrame, threshold: float = 0.03) -> pd.DataFrame:
     """
-    Create binary degradation target.
-    1 = feature at risk
+    Create binary risk label from crash_rate.
     """
-    df["at_risk"] = (
-        (df["crash_rate"] > 0.05) |
-        (df["avg_latency"] > 400)
-    ).astype(int)
+
+    if "crash_rate" not in df.columns:
+        raise ValueError("crash_rate column required to create target")
+
+    df["risk_label"] = (df["crash_rate"] > threshold).astype(int)
+
+    logger.info(
+        f"Target distribution:\n{df['risk_label'].value_counts(normalize=True)}"
+    )
 
     return df
 
 
-def train_model(df):
-    """
-    Train simple RandomForest model
-    """
+# ---------------------------------------------------
+# Train Model
+# ---------------------------------------------------
+def train_model(df: pd.DataFrame):
 
-    features = ["avg_latency", "crash_rate", "usage_count"]
-    X = df[features]
-    y = df["at_risk"]
+    required_cols = ["avg_latency", "avg_feedback", "usage_count", "risk_label"]
 
-    X_train, X_test, y_train, y_test = train_test_split(
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns for training: {missing}")
+
+    X = df[["avg_latency", "avg_feedback", "usage_count"]]
+    y = df["risk_label"]
+
+    X_train, X_val, y_train, y_val = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
     model = RandomForestClassifier(random_state=42)
     model.fit(X_train, y_train)
 
-    score = model.score(X_test, y_test)
-    logger.info(f"Model validation accuracy: {score:.3f}")
+    preds = model.predict_proba(X_val)[:, 1]
+    auc = roc_auc_score(y_val, preds)
+
+    logger.info(f"Model trained | Validation AUC: {auc:.4f}")
 
     return model
 
 
-def score_features(model, df):
-    """
-    Generate risk probabilities
-    """
-
-    features = ["avg_latency", "crash_rate", "usage_count"]
-    df["risk_probability"] = model.predict_proba(df[features])[:, 1]
-
-    return df
+# ---------------------------------------------------
+# Save Model
+# ---------------------------------------------------
+def save_model(model, path="models/risk_model.pkl"):
+    joblib.dump(model, path)
+    logger.info(f"Model saved to {path}")
