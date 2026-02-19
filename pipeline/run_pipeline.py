@@ -3,10 +3,11 @@ from validate import validate_schema
 from transform import engineer_features
 from aggregate import aggregate_daily
 from quality_checks import check_null_rates, check_latency_outliers
-from score import create_target, train_model, score_features
+from score import create_target, train_model, save_model
 
 import logging
 import time
+import os
 
 # ---------------- Logging Configuration ----------------
 logging.basicConfig(
@@ -19,20 +20,13 @@ logger = logging.getLogger(__name__)
 # ---------------- Config ----------------
 RAW_PATH = "data/raw/product_logs.csv"
 OUTPUT_PATH = "data/processed/feature_metrics.csv"
+MODEL_PATH = "models/risk_model.pkl"
 
 
 def log_data_profile(df):
-    """
-    Logs lightweight profiling information for observability.
-    """
     logger.info(f"Row count: {len(df)}")
     logger.info(f"Column count: {len(df.columns)}")
     logger.info(f"Columns: {list(df.columns)}")
-
-    if "date" in df.columns:
-        logger.info(
-            f"Date range: {df['date'].min()} to {df['date'].max()}"
-        )
 
     if "latency_ms" in df.columns:
         logger.info(
@@ -41,11 +35,9 @@ def log_data_profile(df):
             f"mean: {df['latency_ms'].mean():.2f}"
         )
 
-    # Null distribution
     null_summary = df.isnull().mean()
     logger.info(f"Null rate summary:\n{null_summary}")
 
-    # Memory footprint
     memory_mb = df.memory_usage(deep=True).sum() / (1024 ** 2)
     logger.info(f"Approx memory usage: {memory_mb:.2f} MB")
 
@@ -62,11 +54,7 @@ def run():
         logger.info("Raw data loaded successfully")
         log_data_profile(df)
 
-        # ---------- Schema Validation ----------
-        df = validate_schema(df, stage="raw")
-        logger.info("Schema validation passed")
-
-        # ---------- Data Quality Checks ----------
+        # ---------- Data Quality ----------
         check_null_rates(df)
         logger.info("Null rate validation passed")
 
@@ -80,23 +68,26 @@ def run():
         # ---------- Aggregation ----------
         df = aggregate_daily(df)
         df = validate_schema(df, stage="processed")
-
         logger.info("Daily aggregation completed")
         logger.info(f"Aggregated row count: {len(df)}")
-        # ---------- ML Risk Modeling ----------
-        logger.info("Starting ML risk modeling")
-        df = create_target(df)
-        model = train_model(df)
-        df = score_features(model, df)
-        logger.info("Risk scoring completed")
 
-
-        # ---------- Persist Output ----------
-        logger.info("Overwriting existing output if present (idempotent batch execution)")
+        # ---------- Persist Processed Data ----------
+        os.makedirs("data/processed", exist_ok=True)
         df.to_csv(OUTPUT_PATH, index=False)
         logger.info(f"Processed data saved to {OUTPUT_PATH}")
 
-        # ---------- Execution Metadata ----------
+        # ---------- ML Layer ----------
+        logger.info("Starting ML risk modeling")
+
+        df = create_target(df)
+        model = train_model(df)
+
+        os.makedirs("models", exist_ok=True)
+        save_model(model, MODEL_PATH)
+
+        logger.info("ML layer completed")
+
+        # ---------- Runtime ----------
         runtime = round(time.time() - start_time, 2)
         logger.info(f"Pipeline runtime: {runtime} seconds")
 
