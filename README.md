@@ -61,6 +61,37 @@ src/ → data processing, feature engineering, ML modeling
 dashboard/ → interactive analytics and decision dashboard
 The project is structured to mirror a real internal analytics service rather than a notebook-based experiment.
 
+## Data Modeling & Warehouse Design
+
+This project follows a star-schema inspired modeling approach to support scalable analytics and structured querying.
+
+### Fact Table — fact_feature_metrics
+
+- Grain: One row per feature per day
+- Stores latency, crash rate, feedback signals, usage metrics, and predicted risk
+- Enables time-series window functions and rolling metric analysis
+
+### Dimension Table — dim_feature_metadata
+
+- Stores descriptive feature attributes (owner team, lifecycle stage, release metadata)
+- Enables slicing risk and performance by organizational or lifecycle dimensions
+
+### Analytical SQL Patterns
+
+Example rolling latency computation:
+
+```sql
+SELECT
+    feature_id,
+    event_date,
+    AVG(latency_ms) OVER (
+        PARTITION BY feature_id
+        ORDER BY event_date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS rolling_7d_latency
+FROM fact_feature_metrics;
+```
+
 ## Example Insights Produced
 
 - Increasing latency combined with declining feedback indicates early user experience degradation
@@ -69,11 +100,26 @@ The project is structured to mirror a real internal analytics service rather tha
 
 ## Technology Stack
 
-Python
-Pandas, NumPy
-Scikit-learn
-Matplotlib
-Streamlit
+```markdown
+### Core Languages
+
+- Python
+- SQL
+
+### Data Processing
+
+- Pandas
+- NumPy
+
+### Machine Learning
+
+- Scikit-learn
+
+### Visualization
+
+- Matplotlib
+- Streamlit
+```
 
 ## Running the Project Locally
 
