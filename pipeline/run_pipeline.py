@@ -3,6 +3,7 @@ from validate import validate_schema
 from transform import engineer_features
 from aggregate import aggregate_daily
 from quality_checks import check_null_rates, check_latency_outliers
+from score import create_target, train_model, score_features
 
 import logging
 import time
@@ -82,6 +83,13 @@ def run():
 
         logger.info("Daily aggregation completed")
         logger.info(f"Aggregated row count: {len(df)}")
+        # ---------- ML Risk Modeling ----------
+        logger.info("Starting ML risk modeling")
+        df = create_target(df)
+        model = train_model(df)
+        df = score_features(model, df)
+        logger.info("Risk scoring completed")
+
 
         # ---------- Persist Output ----------
         logger.info("Overwriting existing output if present (idempotent batch execution)")
