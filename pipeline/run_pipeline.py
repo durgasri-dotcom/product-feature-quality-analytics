@@ -3,24 +3,22 @@ from validate import validate_schema
 from transform import engineer_features
 from aggregate import aggregate_daily
 from quality_checks import check_null_rates, check_latency_outliers
-from score import create_target, train_model, save_model
+
+from score import MLConfig, create_target, train_model, score_dataframe, save_artifacts
 
 import logging
 import time
-import os
 
 # ---------------- Logging Configuration ----------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
 logger = logging.getLogger(__name__)
 
 # ---------------- Config ----------------
 RAW_PATH = "data/raw/product_logs.csv"
 OUTPUT_PATH = "data/processed/feature_metrics.csv"
-MODEL_PATH = "models/risk_model.pkl"
 
 
 def log_data_profile(df):
@@ -35,12 +33,6 @@ def log_data_profile(df):
             f"mean: {df['latency_ms'].mean():.2f}"
         )
 
-    null_summary = df.isnull().mean()
-    logger.info(f"Null rate summary:\n{null_summary}")
-
-    memory_mb = df.memory_usage(deep=True).sum() / (1024 ** 2)
-    logger.info(f"Approx memory usage: {memory_mb:.2f} MB")
-
 
 def run():
     start_time = time.time()
@@ -54,7 +46,7 @@ def run():
         logger.info("Raw data loaded successfully")
         log_data_profile(df)
 
-        # ---------- Data Quality ----------
+        # ---------- Data Quality Checks ----------
         check_null_rates(df)
         logger.info("Null rate validation passed")
 
@@ -67,30 +59,33 @@ def run():
 
         # ---------- Aggregation ----------
         df = aggregate_daily(df)
-        df = validate_schema(df, stage="processed")
         logger.info("Daily aggregation completed")
-        logger.info(f"Aggregated row count: {len(df)}")
 
-        # ---------- Persist Processed Data ----------
-        os.makedirs("data/processed", exist_ok=True)
-        df.to_csv(OUTPUT_PATH, index=False)
-        logger.info(f"Processed data saved to {OUTPUT_PATH}")
+        # Validate processed schema (minimal)
+        df = validate_schema(df, stage="processed")
+        logger.info("Processed schema validation passed")
 
         # ---------- ML Layer ----------
         logger.info("Starting ML risk modeling")
+        config = MLConfig()
 
-        df = create_target(df)
-        model = train_model(df)
-
-        os.makedirs("models", exist_ok=True)
-        save_model(model, MODEL_PATH)
+        df = create_target(df, config)
+        model, metrics = train_model(df, config)
+        df = score_dataframe(df, model, config)
 
         logger.info("ML layer completed")
+        logger.info(f"Metrics: AUC={metrics.get('auc')}, ACC={metrics.get('accuracy')}")
 
-        # ---------- Runtime ----------
+        # Save model + metrics + feature importance baseline
+        save_artifacts(model, metrics, df, config)
+        logger.info("Artifacts saved to /artifacts")
+
+        # ---------- Persist Output ----------
+        df.to_csv(OUTPUT_PATH, index=False)
+        logger.info(f"Processed data saved to {OUTPUT_PATH}")
+
         runtime = round(time.time() - start_time, 2)
         logger.info(f"Pipeline runtime: {runtime} seconds")
-
         logger.info("========== PIPELINE COMPLETED SUCCESSFULLY ==========")
 
     except Exception as e:
