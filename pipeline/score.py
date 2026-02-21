@@ -1,66 +1,155 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Tuple, Dict, Any
+import json
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
-import joblib
-import logging
 
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    roc_auc_score,
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+)
 
-logger = logging.getLogger(__name__)
+
+# ---------------- Config ----------------
+@dataclass
+class MLConfig:
+    label_col: str = "is_high_risk"
+    feature_cols: Tuple[str, ...] = ("avg_latency", "crash_rate", "avg_feedback", "usage_count")
+    test_size: float = 0.2
+    random_state: int = 42
+    n_estimators: int = 200
+    max_depth: int | None = None
 
 
-# ---------------------------------------------------
-# Create Target Variable
-# ---------------------------------------------------
-def create_target(df: pd.DataFrame, threshold: float = 0.03) -> pd.DataFrame:
+def create_target(df: pd.DataFrame, config: MLConfig) -> pd.DataFrame:
     """
-    Create binary risk label from crash_rate.
+    Create a binary target label for model training.
+    We mark 'high risk' features based on crash_rate + latency + feedback.
+
+    Beginner note:
+    - This is a rule-based label to simulate what a real team might do initially.
+    - Later, you can replace this with real incident/defect labels.
     """
+    required = set(config.feature_cols)
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"create_target: Missing required columns: {missing}")
 
-    if "crash_rate" not in df.columns:
-        raise ValueError("crash_rate column required to create target")
+    # Simple thresholds (tune later)
+    crash_thr = df["crash_rate"].quantile(0.85)      # top 15% crash
+    latency_thr = df["avg_latency"].quantile(0.85)  # top 15% latency
+    feedback_thr = df["avg_feedback"].quantile(0.15)  # bottom 15% feedback
 
-    df["risk_label"] = (df["crash_rate"] > threshold).astype(int)
-
-    logger.info(
-        f"Target distribution:\n{df['risk_label'].value_counts(normalize=True)}"
-    )
+    df = df.copy()
+    df[config.label_col] = (
+        (df["crash_rate"] >= crash_thr)
+        | (df["avg_latency"] >= latency_thr)
+        | (df["avg_feedback"] <= feedback_thr)
+    ).astype(int)
 
     return df
 
 
-# ---------------------------------------------------
-# Train Model
-# ---------------------------------------------------
-def train_model(df: pd.DataFrame):
+def train_model(df: pd.DataFrame, config: MLConfig) -> Tuple[RandomForestClassifier, Dict[str, Any]]:
+    """
+    Train a baseline RandomForest model and return metrics.
+    """
+    df = df.copy()
 
-    required_cols = ["avg_latency", "avg_feedback", "usage_count", "risk_label"]
+    # Clean NaNs safely
+    df[list(config.feature_cols)] = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan)
+    df[list(config.feature_cols)] = df[list(config.feature_cols)].fillna(0)
 
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns for training: {missing}")
+    X = df[list(config.feature_cols)]
+    y = df[config.label_col].astype(int)
 
-    X = df[["avg_latency", "avg_feedback", "usage_count"]]
-    y = df["risk_label"]
-
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=config.test_size, random_state=config.random_state, stratify=y
     )
 
-    model = RandomForestClassifier(random_state=42)
+    model = RandomForestClassifier(
+        n_estimators=config.n_estimators,
+        random_state=config.random_state,
+        max_depth=config.max_depth,
+        n_jobs=-1,
+    )
     model.fit(X_train, y_train)
 
-    preds = model.predict_proba(X_val)[:, 1]
-    auc = roc_auc_score(y_val, preds)
+    # Probabilities for AUC
+    proba = model.predict_proba(X_test)[:, 1]
+    preds = (proba >= 0.5).astype(int)
 
-    logger.info(f"Model trained | Validation AUC: {auc:.4f}")
+    metrics = {
+        "auc": float(roc_auc_score(y_test, proba)) if len(np.unique(y_test)) > 1 else None,
+        "accuracy": float(accuracy_score(y_test, preds)),
+        "confusion_matrix": confusion_matrix(y_test, preds).tolist(),
+        "classification_report": classification_report(y_test, preds, output_dict=True),
+        "n_train": int(len(X_train)),
+        "n_test": int(len(X_test)),
+        "features": list(config.feature_cols),
+        "label_col": config.label_col,
+    }
 
-    return model
+    return model, metrics
 
 
-# ---------------------------------------------------
-# Save Model
-# ---------------------------------------------------
-def save_model(model, path="models/risk_model.pkl"):
-    joblib.dump(model, path)
-    logger.info(f"Model saved to {path}")
+def score_dataframe(df: pd.DataFrame, model: RandomForestClassifier, config: MLConfig) -> pd.DataFrame:
+    """
+    Add model risk score predictions to the dataframe.
+    """
+    df = df.copy()
+    X = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan).fillna(0)
+    df["risk_score"] = model.predict_proba(X)[:, 1]
+    df["risk_bucket"] = pd.cut(
+        df["risk_score"],
+        bins=[-0.01, 0.33, 0.66, 1.01],
+        labels=["low", "medium", "high"],
+    )
+    return df
+
+
+def save_artifacts(
+    model: RandomForestClassifier,
+    metrics: Dict[str, Any],
+    df_scored: pd.DataFrame,
+    config: MLConfig,
+    artifacts_dir: str = "artifacts",
+) -> None:
+    """
+    Save model + metrics + feature importance for recruiter-grade repo quality.
+    """
+    import joblib  # local import to keep requirements minimal
+
+    base = Path(artifacts_dir)
+    (base / "models").mkdir(parents=True, exist_ok=True)
+    (base / "reports").mkdir(parents=True, exist_ok=True)
+
+    # Save model
+    model_path = base / "models" / "risk_model.joblib"
+    joblib.dump(model, model_path)
+
+    # Save metrics JSON
+    metrics_path = base / "reports" / "metrics.json"
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=2)
+
+    # Save feature importance
+    importances = getattr(model, "feature_importances_", None)
+    if importances is not None:
+        fi = pd.DataFrame(
+            {"feature": list(config.feature_cols), "importance": importances}
+        ).sort_values("importance", ascending=False)
+        fi.to_csv(base / "reports" / "feature_importance.csv", index=False)
+
+    # Save baseline stats for drift (Phase 5+)
+    baseline = df_scored[list(config.feature_cols)].describe().to_dict()
+    with open(base / "reports" / "baseline_stats.json", "w", encoding="utf-8") as f:
+        json.dump(baseline, f, indent=2)
