@@ -1,42 +1,27 @@
-# -------------------------
-# Python / VS Code
-# -------------------------
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.vscode/
-.idea/
 
-# -------------------------
-# Virtual environment
-# -------------------------
+# Virtual environments
 venv/
-.venv/
-env/
+.env/
 
-# -------------------------
 # Logs
-# -------------------------
 logs/
 *.log
 
-# -------------------------
-# OS junk
-# -------------------------
+# Artifacts 
+artifacts/models/
+artifacts/reports/*.json
+
+# Processed data
+data/processed/
+
+# OS files
 .DS_Store
 Thumbs.db
 
-# -------------------------
-# Artifacts (generated outputs)
-# -------------------------
-artifacts/
-reports/
-models/
-
-# -------------------------
-# Data outputs (generated)
-# -------------------------
-data/processed/
-data/raw/*.zip
-data/raw/*.parquet
+# IDE
+.vscode/
