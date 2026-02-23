@@ -1,9 +1,42 @@
+# -------------------------
+# Python / VS Code
+# -------------------------
 __pycache__/
-.env
-.venv/
 *.pyc
-.ipynb_checkpoints/
+*.pyo
+*.pyd
+.vscode/
+.idea/
+
+# -------------------------
+# Virtual environment
+# -------------------------
+venv/
+.venv/
+env/
+
+# -------------------------
+# Logs
+# -------------------------
+logs/
+*.log
+
+# -------------------------
+# OS junk
+# -------------------------
 .DS_Store
-data/processed/
-models/
+Thumbs.db
+
+# -------------------------
+# Artifacts (generated outputs)
+# -------------------------
 artifacts/
+reports/
+models/
+
+# -------------------------
+# Data outputs (generated)
+# -------------------------
+data/processed/
+data/raw/*.zip
+data/raw/*.parquet
