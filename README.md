@@ -55,11 +55,125 @@ The system ingests feature-level telemetry and produces actionable insights thro
 
 ## System Architecture
 
-data/raw → synthetic product telemetry
-data/processed → derived metrics and time-series outputs
-src/ → data processing, feature engineering, ML modeling
-dashboard/ → interactive analytics and decision dashboard
-The project is structured to mirror a real internal analytics service rather than a notebook-based experiment.
+### Repository Structure
+
+```text
+data/
+
+  raw/                # synthetic feature telemetry
+  processed/           # pipeline outputs used by dashboard
+
+pipeline/
+
+  run_pipeline.py      # orchestration entry point
+
+  ingest.py            # ingestion layer
+
+  validate.py          # schema validation
+
+  quality_checks.py    # data quality checks
+
+  transform.py         # feature engineering
+
+  aggregate.py         # daily aggregation
+
+  score.py             # ML training + scoring
+
+  monitoring/
+
+    baseline.py        # baseline computation + persistence
+
+    drift.py           # drift detection + persistence
+
+    run_report.py      # run report persistence
+
+    history.py         # run history tracking (Phase 6)
+
+config/
+
+  config.yaml          # config-driven execution
+
+artifacts/
+
+  models/              # trained model artifacts (optional to ignore in git)
+
+  reports/             # metrics, drift, run reports
+
+  history/             # run history log
+
+logs/
+
+  pipeline.log         # execution logs
+
+dashboard/
+
+  app.py               # Streamlit dashboard
+```
+
+```mermaid
+flowchart TD
+
+  %% ======================
+  %% DATA INPUT
+  %% ======================
+  A[Raw Telemetry CSV<br/>data/raw/product_logs.csv]
+
+  %% ======================
+  %% PIPELINE
+  %% ======================
+  A --> B[Ingestion<br/>pipeline/ingest.py]
+
+  B --> C[Schema Validation<br/>pipeline/validate.py]
+
+  C --> D[Quality Checks<br/>pipeline/quality_checks.py]
+
+  D --> E[Feature Engineering<br/>pipeline/transform.py]
+
+  E --> F[Aggregation<br/>pipeline/aggregate.py]
+
+  F --> G[ML Training & Risk Scoring<br/>pipeline/score.py]
+
+  %% ======================
+  %% OUTPUTS
+  %% ======================
+  G --> H[Processed Data<br/>data/processed/]
+
+  G --> I[Artifacts<br/>artifacts/]
+
+  %% ======================
+  %% PROCESSED FILES
+  %% ======================
+  H --> H1[feature_metrics.csv]
+
+  H --> H2[feature_daily_trends.csv]
+
+  %% ======================
+  %% ARTIFACT FILES
+  %% ======================
+  I --> I1[Model<br/>artifacts/models/risk_model.joblib]
+
+  I --> I2[Reports<br/>artifacts/reports/]
+
+  I2 --> I21[baseline_stats.json]
+
+  I2 --> I22[data_drift.json]
+
+  I2 --> I23[metrics.json]
+
+  I2 --> I24[run_report.json]
+
+  %% ======================
+  %% DASHBOARD
+  %% ======================
+  H --> J[Dashboard<br/>dashboard/]
+
+  I --> J
+
+  %% ======================
+  %% LOGGING
+  %% ======================
+  G --> K[Pipeline Logs<br/>logs/pipeline.log]
+```
 
 ## Data Modeling & Warehouse Design
 
