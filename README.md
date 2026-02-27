@@ -1,285 +1,430 @@
-# Product Feature Quality & Performance Analytics
+# Product Feature Quality & Performance Analytics Platform
 
-An analytics and machine learning system for monitoring feature-level reliability, performance trends, and proactive risk detection in large-scale consumer products.
-This project demonstrates how telementry data and applied ML can be used to detect early performance regressions, quantify opereational risk, and prioritize engineering effort before user experience degrades at scale.
+A production-style analytics and machine learning system for monitoring feature-level reliability, detecting performance regressions, and proactively identifying operational risk in large-scale consumer platforms.
 
-## Dashboard Preview
+This project simulates how modern technology companies (Netflix, Uber, Amazon, Meta) build internal analytics and ML pipelines to detect quality degradation before it impacts users.
+
+The system implements a complete end-to-end analytics architecture including:
+
+- Data ingestion and validation
+- Feature engineering and aggregation
+- Machine learning risk prediction
+- Model artifact storage
+- Data quality monitoring and drift detection
+- Run reporting and observability
+- Dashboard-based decision interface
+
+---
+
+# Dashboard Preview
 
 ![Dashboard Demo](assets/dashboard_demo.gif)
 
-## Problem Context
+---
 
-Modern consumer platforms operate hundreds of product features simultaneously.
-Small regressions in latency, stability, or user experience often go unnoticed until they impact a large user base.
-Engineering and product teams need a way to:
+# Problem Context
+
+Large-scale consumer platforms operate hundreds of product features simultaneously.
+
+Small degradations in latency, crash rate, or user experience often go unnoticed until they affect millions of users.
+
+Engineering teams require systems that can:
 
 - Detect early warning signals
-- Understand which features are most at risk
-- Prioritize mitigation based on both technical risk and user impact
-- This project simulates that decision-making process using synthetic telemetry data and a production-style analytics pipeline.
+- Quantify feature-level reliability risk
+- Prioritize engineering effort based on impact
+- Monitor data quality and pipeline health
+- Provide actionable insights through dashboards
 
-## What This System Does
+This project simulates how production analytics systems solve these problems.
 
-The system ingests feature-level telemetry and produces actionable insights through:
+---
 
-- Predictive risk modeling
-- Time-series performance analysis
-- Impact-based prioritization
-- An executive-facing analytics dashboard
-  The goal is not to surface raw metrics, but to support clear, defensible decisions.
+# System Architecture
 
-## Core Capabilities
-
-### Feature-Level Risk Modeling
-
-- Estimates the probability of quality degradation per feature
-- Uses operational signals such as latency, crash rate, and user feedback
-- Designed to augment engineering judgment rather than replace it
-
-### Time-Series Performance Analysis
-
-- Tracks trends in latency and user experience over time
-- Identifies early divergence patterns that often precede failures
-
-### Impact-Based Prioritization
-
-- Combines predicted risk with feature usage volume
-- Produces an Impact Score to rank features by potential user harm
-- Helps teams to focus effort where it matters most
-
-### Decision-Oriented Dashboard
-
-- Clean, executive-friendly interface built with Streamlit
-- Automated insight annotations instead of raw chart inspection
-- Designed for product managers, engineering leads, and reliability teams
-
-## System Architecture
-
-### Repository Structure
-
-```text
-data/
-
-  raw/                # synthetic feature telemetry
-  processed/           # pipeline outputs used by dashboard
-
-pipeline/
-
-  run_pipeline.py      # orchestration entry point
-
-  ingest.py            # ingestion layer
-
-  validate.py          # schema validation
-
-  quality_checks.py    # data quality checks
-
-  transform.py         # feature engineering
-
-  aggregate.py         # daily aggregation
-
-  score.py             # ML training + scoring
-
-  monitoring/
-
-    baseline.py        # baseline computation + persistence
-
-    drift.py           # drift detection + persistence
-
-    run_report.py      # run report persistence
-
-    history.py         # run history tracking (Phase 6)
-
-config/
-
-  config.yaml          # config-driven execution
-
-artifacts/
-
-  models/              # trained model artifacts (optional to ignore in git)
-
-  reports/             # metrics, drift, run reports
-
-  history/             # run history log
-
-logs/
-
-  pipeline.log         # execution logs
-
-dashboard/
-
-  app.py               # Streamlit dashboard
-```
+This diagram represents the complete execution and data flow architecture.
 
 ```mermaid
 flowchart TD
 
-  %% ======================
-  %% DATA INPUT
-  %% ======================
-  A[Raw Telemetry CSV<br/>data/raw/product_logs.csv]
+    A[Raw Telemetry Data<br>data/raw/product_logs.csv]
 
-  %% ======================
-  %% PIPELINE
-  %% ======================
-  A --> B[Ingestion<br/>pipeline/ingest.py]
+    A --> B[Ingestion Layer<br>pipeline/ingest.py]
 
-  B --> C[Schema Validation<br/>pipeline/validate.py]
+    B --> C[Schema Validation<br>pipeline/validate.py]
 
-  C --> D[Quality Checks<br/>pipeline/quality_checks.py]
+    C --> D[Data Quality Checks<br>pipeline/quality_checks.py]
 
-  D --> E[Feature Engineering<br/>pipeline/transform.py]
+    D --> E[Feature Engineering<br>pipeline/transform.py]
 
-  E --> F[Aggregation<br/>pipeline/aggregate.py]
+    E --> F[Daily Aggregation<br>pipeline/aggregate.py]
 
-  F --> G[ML Training & Risk Scoring<br/>pipeline/score.py]
+    F --> G[ML Training & Risk Scoring<br>pipeline/score.py]
 
-  %% ======================
-  %% OUTPUTS
-  %% ======================
-  G --> H[Processed Data<br/>data/processed/]
+    %% Monitoring Layer
 
-  G --> I[Artifacts<br/>artifacts/]
+    G --> M1[Baseline Computation<br>pipeline/monitoring/baseline.py]
 
-  %% ======================
-  %% PROCESSED FILES
-  %% ======================
-  H --> H1[feature_metrics.csv]
+    G --> M2[Data Drift Detection<br>pipeline/monitoring/drift.py]
 
-  H --> H2[feature_daily_trends.csv]
+    G --> M3[Run Report Generation<br>pipeline/monitoring/run_report.py]
 
-  %% ======================
-  %% ARTIFACT FILES
-  %% ======================
-  I --> I1[Model<br/>artifacts/models/risk_model.joblib]
+    %% Artifact Storage
 
-  I --> I2[Reports<br/>artifacts/reports/]
+    G --> H1[Model Storage<br>artifacts/models/risk_model.joblib]
 
-  I2 --> I21[baseline_stats.json]
+    M1 --> H2[Baseline Statistics<br>artifacts/reports/baseline_stats.json]
 
-  I2 --> I22[data_drift.json]
+    M2 --> H3[Drift Report<br>artifacts/reports/data_drift.json]
 
-  I2 --> I23[metrics.json]
+    M3 --> H4[Run Report<br>artifacts/reports/run_report.json]
 
-  I2 --> I24[run_report.json]
+    G --> H5[Model Metrics<br>artifacts/reports/metrics.json]
 
-  %% ======================
-  %% DASHBOARD
-  %% ======================
-  H --> J[Dashboard<br/>dashboard/]
+    G --> H6[Feature Importance<br>artifacts/reports/feature_importance.csv]
 
-  I --> J
+    %% Processed Output
 
-  %% ======================
-  %% LOGGING
-  %% ======================
-  G --> K[Pipeline Logs<br/>logs/pipeline.log]
+    G --> I1[Processed Metrics<br>data/processed/feature_metrics.csv]
+
+    G --> I2[Feature Trends<br>data/processed/feature_daily_trends.csv]
+
+    %% Dashboard Layer
+
+    I1 --> J[Analytics Dashboard<br>dashboard/app.py]
+
+    I2 --> J
+
+    H4 --> J
+
+    H5 --> J
 ```
 
-## Data Modeling & Warehouse Design
+---
 
-This project follows a star-schema inspired modeling approach to support scalable analytics and structured querying.
+# Pipeline Architecture Overview
 
-### Fact Table — fact_feature_metrics
+Pipeline execution flow:
 
-- Grain: One row per feature per day
-- Stores latency, crash rate, feedback signals, usage metrics, and predicted risk
-- Enables time-series window functions and rolling metric analysis
-
-### Dimension Table — dim_feature_metadata
-
-- Stores descriptive feature attributes (owner team, lifecycle stage, release metadata)
-- Enables slicing risk and performance by organizational or lifecycle dimensions
-
-### Analytical SQL Patterns
-
-Example rolling latency computation:
-
-```sql
-SELECT
-    feature_id,
-    event_date,
-    AVG(latency_ms) OVER (
-        PARTITION BY feature_id
-        ORDER BY event_date
-        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-    ) AS rolling_7d_latency
-FROM fact_feature_metrics;
+```
+run_pipeline.py
+  ├ ingest.py
+  ├ validate.py
+  ├ quality_checks.py
+  ├ transform.py
+  ├ aggregate.py
+  ├ score.py
+  ├ monitoring/baseline.py
+  ├ monitoring/drift.py
+  └ monitoring/run_report.py
 ```
 
-## Pipeline Orchestration
+Design principles:
 
-The system implements a modular, production-style data pipeline with clearly separated execution layers:
+- Stateless execution
+- Idempotent batch processing
+- Modular pipeline stages
+- Observable and auditable execution
+- Extensible architecture
 
-- Ingestion Layer — loads raw telemetry data
-- Validation Layer — enforces schema consistency and data quality checks
-- Feature Engineering Layer — computes derived metrics and quality signals
-- Aggregation Layer — produces daily feature-level aggregates
-- ML Scoring Layer — generates predicted risk probabilities
+---
 
-The pipeline is orchestrated through a single execution entry point (`run_pipeline.py`) and is designed to be:
+# Data Model Architecture
 
-- Stateless
-- Idempotent
-- Batch-execution ready
-- Easily extendable to distributed processing frameworks (e.g., Spark)
+Fact table:
 
-This structure mirrors real-world analytics engineering systems rather than notebook-based experimentation.
+```
+fact_feature_metrics
+```
 
-## Example Insights Produced
+Grain:
 
-- Increasing latency combined with declining feedback indicates early user experience degradation
-- High-risk, high-usage features are flagged for immediate investigation
-- Low-risk features remain under passive monitoring without unnecessary escalation
+```
+one row per feature per day
+```
 
-## Technology Stack
+Contains:
 
-```markdown
-### Core Languages
+- latency metrics
+- crash rate
+- feedback score
+- usage volume
+- predicted risk probability
+
+Dimension table:
+
+```
+dim_feature_metadata
+```
+
+Contains:
+
+- feature ownership
+- lifecycle stage
+- feature metadata
+
+---
+
+# Machine Learning Architecture
+
+```mermaid
+flowchart LR
+
+    A[Aggregated Feature Data]
+
+    A --> B[Feature Selection]
+
+    B --> C[Target Engineering]
+
+    C --> D[Train ML Model<br>RandomForestClassifier]
+
+    D --> E[Save Model Artifact]
+
+    D --> F[Feature Importance Computation]
+
+    D --> G[Generate Predictions]
+
+    G --> H[Risk Probability Output]
+```
+
+Artifacts generated:
+
+```
+artifacts/models/risk_model.joblib
+artifacts/reports/metrics.json
+artifacts/reports/feature_importance.csv
+```
+
+Output:
+
+```
+risk_probability per feature per day
+```
+
+---
+
+# Monitoring and Observability Architecture
+
+```mermaid
+flowchart LR
+
+    A[Pipeline Run]
+
+    A --> B[Compute Baseline Statistics]
+
+    B --> C[Compare with Historical Baseline]
+
+    C --> D[Detect Data Drift]
+
+    D --> E[Generate Run Report]
+
+    E --> F[Store Monitoring Artifacts]
+```
+
+Generated monitoring artifacts:
+
+```
+baseline_stats.json
+data_drift.json
+run_report.json
+metrics.json
+```
+
+This enables production-grade observability.
+
+---
+
+# Core Capabilities
+
+## Feature Risk Modeling
+
+- Predicts degradation probability
+- Identifies unstable product features
+- Enables proactive engineering intervention
+
+## Data Quality Monitoring
+
+- Schema validation
+- Missing value detection
+- Anomaly detection
+
+## Drift Detection
+
+- Detects statistical changes in incoming data
+- Protects model reliability
+
+## Observability
+
+- Pipeline run reports
+- Artifact tracking
+- Monitoring metrics
+
+## Dashboard Analytics
+
+- Feature-level reliability visualization
+- Risk monitoring interface
+- Decision support for engineering teams
+
+---
+
+# Example Insights Generated
+
+Examples include:
+
+- Features with rising latency flagged as high risk
+- Reliability degradation trends
+- Feature importance analysis
+- Pipeline health monitoring
+
+---
+
+# Project Structure
+
+```
+product-feature-quality-analytics/
+
+├ assets/
+│   └ dashboard_demo.gif
+│
+├ dashboard/
+│   └ app.py
+│
+├ data/
+│   ├ raw/
+│   │   └ product_logs.csv
+│   └ processed/
+│       ├ feature_metrics.csv
+│       └ feature_daily_trends.csv
+│
+├ pipeline/
+│   ├ ingest.py
+│   ├ validate.py
+│   ├ quality_checks.py
+│   ├ transform.py
+│   ├ aggregate.py
+│   ├ score.py
+│   ├ run_pipeline.py
+│   └ monitoring/
+│       ├ baseline.py
+│       ├ drift.py
+│       └ run_report.py
+│
+├ artifacts/
+│   ├ models/
+│   │   └ risk_model.joblib
+│   └ reports/
+│       ├ baseline_stats.json
+│       ├ data_drift.json
+│       ├ metrics.json
+│       ├ feature_importance.csv
+│       └ run_report.json
+│
+├ logs/
+│   └ pipeline.log
+│
+├ README.md
+├ requirements.txt
+└ .gitignore
+```
+
+---
+
+# Technology Stack
+
+Languages:
 
 - Python
 - SQL
 
-### Data Processing
+Data Processing:
 
 - Pandas
 - NumPy
 
-### Machine Learning
+Machine Learning:
 
 - Scikit-learn
 
-### Visualization
+Visualization:
 
-- Matplotlib
 - Streamlit
+- Matplotlib
+
+Monitoring:
+
+- Custom monitoring pipeline
+- Drift detection
+- Logging and reporting
+
+---
+
+# Running the Pipeline
+
+Install dependencies:
+
+```
+pip install -r requirements.txt
 ```
 
-## Running the Project Locally
+Run pipeline:
 
-- pip install -r requirements.txt
-- streamlit run dashboard/app.py
+```
+python pipeline/run_pipeline.py
+```
 
-## Design Philosophy
+Run dashboard:
 
-Prioritize decision support over visualization complexity
-Use machine learning pragmatically, not as a black box
-Optimize for clarity, reproducibility, and explainability
-Reflect how analytics is actually used in production environments
+```
+streamlit run dashboard/app.py
+```
 
-## Potential Extensions
+---
 
-- Real-time data ingestion
-- Automated anomaly detection
-- Alerting integrations (Slack, PagerDuty)
-- Deployment and incident annotations
-- Feature comparison and cohort analysis
+# Production Design Principles Demonstrated
 
-## Maintainer
+This project demonstrates real-world production ML system design:
+
+- Modular pipeline architecture
+- Model artifact persistence
+- Data versioning
+- Drift detection
+- Monitoring and observability
+- Idempotent pipeline execution
+- Dashboard-based analytics
+
+---
+
+# Phase 6: Production Readiness (Planned Implementation)
+
+Upcoming additions:
+
+- tests/
+- CI/CD pipeline integration
+- Automated retraining
+- Docker containerization
+- Makefile automation
+- Cloud deployment (AWS / GCP)
+
+---
+
+# Maintainer
 
 Durga Sri  
-Portfolio project demonstrating applied analytics, responsible machine learning,
-and product-focused decision systems.
+AI / Data Engineering Portfolio Project
 
-## Summary
+GitHub:  
+https://github.com/durgasri-dotcom
 
-This project showcases how analytics and manchine learning can be applied to real operational problems, emphasising interpretability, impact-aware prioritisation, and actionable insights over model complexity
+---
+
+# Summary
+
+This project demonstrates a complete production-style analytics and machine learning platform including:
+
+- Data ingestion and processing
+- Machine learning risk modeling
+- Monitoring and observability
+- Artifact management
+- Dashboard visualization
+
+This architecture reflects real-world systems used by companies like Netflix, Uber, Amazon, and Meta.

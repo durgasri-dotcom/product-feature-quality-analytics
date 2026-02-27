@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple, Dict, Any
+from typing import Tuple, Dict, Any
 import json
 from pathlib import Path
 
@@ -33,20 +33,15 @@ def create_target(df: pd.DataFrame, config: MLConfig) -> pd.DataFrame:
     """
     Create a binary target label for model training.
     We mark 'high risk' features based on crash_rate + latency + feedback.
-
-    Beginner note:
-    - This is a rule-based label to simulate what a real team might do initially.
-    - Later, you can replace this with real incident/defect labels.
     """
     required = set(config.feature_cols)
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"create_target: Missing required columns: {missing}")
 
-    # Simple thresholds (tune later)
-    crash_thr = df["crash_rate"].quantile(0.85)      # top 15% crash
-    latency_thr = df["avg_latency"].quantile(0.85)  # top 15% latency
-    feedback_thr = df["avg_feedback"].quantile(0.15)  # bottom 15% feedback
+    crash_thr = df["crash_rate"].quantile(0.85)
+    latency_thr = df["avg_latency"].quantile(0.85)
+    feedback_thr = df["avg_feedback"].quantile(0.15)
 
     df = df.copy()
     df[config.label_col] = (
@@ -64,15 +59,18 @@ def train_model(df: pd.DataFrame, config: MLConfig) -> Tuple[RandomForestClassif
     """
     df = df.copy()
 
-    # Clean NaNs safely
     df[list(config.feature_cols)] = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan)
     df[list(config.feature_cols)] = df[list(config.feature_cols)].fillna(0)
 
     X = df[list(config.feature_cols)]
     y = df[config.label_col].astype(int)
 
+    # NOTE: stratify needs both classes; if your dataset sometimes has 1 class,
+    # handle it safely:
+    stratify = y if y.nunique() > 1 else None
+
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=config.test_size, random_state=config.random_state, stratify=y
+        X, y, test_size=config.test_size, random_state=config.random_state, stratify=stratify
     )
 
     model = RandomForestClassifier(
@@ -83,7 +81,6 @@ def train_model(df: pd.DataFrame, config: MLConfig) -> Tuple[RandomForestClassif
     )
     model.fit(X_train, y_train)
 
-    # Probabilities for AUC
     proba = model.predict_proba(X_test)[:, 1]
     preds = (proba >= 0.5).astype(int)
 
@@ -107,6 +104,7 @@ def score_dataframe(df: pd.DataFrame, model: RandomForestClassifier, config: MLC
     """
     df = df.copy()
     X = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan).fillna(0)
+
     df["risk_score"] = model.predict_proba(X)[:, 1]
     df["risk_bucket"] = pd.cut(
         df["risk_score"],
@@ -124,9 +122,9 @@ def save_artifacts(
     artifacts_dir: str = "artifacts",
 ) -> None:
     """
-    Save model + metrics + feature importance for recruiter-grade repo quality.
+    Save model + metrics + feature importance + baseline stats.
     """
-    import joblib  # local import to keep requirements minimal
+    import joblib
 
     base = Path(artifacts_dir)
     (base / "models").mkdir(parents=True, exist_ok=True)
@@ -149,7 +147,7 @@ def save_artifacts(
         ).sort_values("importance", ascending=False)
         fi.to_csv(base / "reports" / "feature_importance.csv", index=False)
 
-    # Save baseline stats for drift (Phase 5+)
+    # Save baseline stats for drift
     baseline = df_scored[list(config.feature_cols)].describe().to_dict()
     with open(base / "reports" / "baseline_stats.json", "w", encoding="utf-8") as f:
         json.dump(baseline, f, indent=2)
