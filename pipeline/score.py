@@ -65,8 +65,7 @@ def train_model(df: pd.DataFrame, config: MLConfig) -> Tuple[RandomForestClassif
     X = df[list(config.feature_cols)]
     y = df[config.label_col].astype(int)
 
-    # NOTE: stratify needs both classes; if your dataset sometimes has 1 class,
-    # handle it safely:
+    
     stratify = y if y.nunique() > 1 else None
 
     X_train, X_test, y_train, y_test = train_test_split(

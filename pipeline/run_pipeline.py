@@ -57,7 +57,7 @@ def run():
         logger.info("Raw data loaded successfully")
         log_data_profile(df)
 
-        # ---------- Phase 5: Baseline + Drift Monitoring (RAW DATA) ----------
+        # ----------  Baseline + Drift Monitoring (RAW DATA) ----------
         baseline = load_baseline()
         current_stats = compute_baseline(df)
 
@@ -90,7 +90,7 @@ def run():
         df = aggregate_daily(df)
         logger.info("Daily aggregation completed")
 
-        # Validate processed schema (minimal)
+        # --------Validate processed schema------ 
         df = validate_schema(df, stage="processed")
         logger.info("Processed schema validation passed")
 
@@ -105,7 +105,7 @@ def run():
         logger.info("ML layer completed")
         logger.info(f"Metrics: AUC={metrics.get('auc')}, ACC={metrics.get('accuracy')}")
 
-        # Save model + metrics + feature importance baseline
+        # ------Save model + metrics + feature importance baseline------
         save_artifacts(model, metrics, df, config)
         logger.info("Artifacts saved to /artifacts")
 
@@ -118,7 +118,7 @@ def run():
         logger.info(f"Pipeline runtime: {runtime} seconds")
         logger.info("========== PIPELINE COMPLETED SUCCESSFULLY ==========")
 
-        # ---------- Phase 5: Run Report (SUCCESS) ----------
+        # ---------- Run Report (SUCCESS) ----------
         save_run_report(
             {
                 "status": "success",
@@ -134,7 +134,7 @@ def run():
         logger.error("========== PIPELINE FAILED ==========")
         logger.error(f"Failure reason: {str(e)}")
 
-        # ---------- Phase 5: Run Report (FAILURE) ----------
+        # ---------- Run Report (FAILURE) ----------
         save_run_report(
             {
                 "status": "failed",
