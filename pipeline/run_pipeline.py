@@ -55,7 +55,7 @@ def run():
     start_time = time.time()
 
     try:
-        logger.info("========== PIPELINE STARTED ==========")
+        logger.info(f"Pipeline started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         # ── STEP 1: Ingestion ─────────────────────────────────
         
@@ -180,7 +180,7 @@ def run():
        
 
     except Exception as e:
-        logger.error("========== PIPELINE FAILED ==========")
+        logger.info(f"Pipeline finished in {runtime:.2f}s — {rows_processed} rows processed")
         logger.error(f"Failure reason: {str(e)}", exc_info=True)
 
         save_run_report({
