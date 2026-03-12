@@ -24,8 +24,7 @@ jobs:
         run: pip install ruff==0.4.0
 
       - name: Run Ruff linter
-        # Ruff is a fast Python linter (replaces flake8 + isort)
-        # Used at Anthropic, Pydantic, and many FAANG teams
+
         run: ruff check pipeline/ tests/ kafka/ mlflow_tracking/ --ignore E501
 
   # ── JOB 2: TESTS WITH COVERAGE ────────────────────────────
@@ -44,7 +43,7 @@ jobs:
           python-version: "3.11"
 
       - name: Cache pip dependencies
-        # Caching speeds up CI by reusing installed packages
+
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -117,8 +116,8 @@ jobs:
         run: pip install dbt-core dbt-duckdb
 
       - name: Validate dbt models compile
-        # dbt parse checks SQL is valid without running queries
+
         run: |
           cd dbt_project
           dbt parse --profiles-dir .
-        continue-on-error: true # Don't fail CI if dbt isn't fully set up yet
+        continue-on-error: true
