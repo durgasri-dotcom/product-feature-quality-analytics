@@ -1,0 +1,124 @@
+version: "3.8"
+
+services:
+  # ── ZOOKEEPER (required by Kafka) ─────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── KAFKA (streaming message broker) ──────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── MAIN PIPELINE ──────────────────────────────────────────
+  pipeline:
+    build: .
+    container_name: analytics_pipeline
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./mlflow_runs:/app/mlflow_runs
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      PYTHONPATH: /app
+    command: python pipeline/run_pipeline.py
+    restart: on-failure
+
+  # ── STREAMLIT DASHBOARD ────────────────────────────────────
+  dashboard:
+    build: .
+    container_name: streamlit_dashboard
+    depends_on:
+      - pipeline
+    ports:
+      - "8501:8501" # Open browser to: http://localhost:8501
+    volumes:
+      - .:/app
+    environment:
+      PYTHONPATH: /app
+    command: streamlit run dashboard/app.py --server.address=0.0.0.0
+
+  # ── MLFLOW TRACKING SERVER ─────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow_server
+    ports:
+      - "5000:5000" # Open browser to: http://localhost:5000
+    volumes:
+      - ./mlflow_runs:/mlflow_runs
+    command: >
+      bash -c "pip install mlflow -q &&
+               mlflow server
+               --backend-store-uri /mlflow_runs
+               --default-artifact-root /mlflow_runs
+               --host 0.0.0.0
+               --port 5000"
+
+  # ── PROMETHEUS (metrics collector) ────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090" # Open browser to: http://localhost:9090
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+
+  # ── GRAFANA (metrics dashboard) ───────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+# ── PERSISTENT VOLUMES ──────────────────────────────────────
+volumes:
+  grafana_data:

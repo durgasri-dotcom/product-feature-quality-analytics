@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s # Collect metrics every 15 seconds
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus monitors itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Your pipeline exposes metrics on port 8000
+  # (prometheus-client library does this automatically)
+  - job_name: "analytics_pipeline"
+    static_configs:
+      - targets: ["pipeline:8000"]
+    metrics_path: "/metrics"

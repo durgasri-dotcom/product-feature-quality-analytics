@@ -1,38 +1,124 @@
-name: CI
+name: CI — Feature Quality Analytics Pipeline
 
 on:
   push:
+    branches: [main, develop]
   pull_request:
+    branches: [main]
 
 jobs:
-  tests:
+  # ── JOB 1: LINT & FORMAT CHECK ────────────────────────────
+  lint:
+    name: Code Quality Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install linting tools
+        run: pip install ruff==0.4.0
+
+      - name: Run Ruff linter
+        # Ruff is a fast Python linter (replaces flake8 + isort)
+        # Used at Anthropic, Pydantic, and many FAANG teams
+        run: ruff check pipeline/ tests/ kafka/ mlflow_tracking/ --ignore E501
+
+  # ── JOB 2: TESTS WITH COVERAGE ────────────────────────────
+  tests:
+    name: Tests + Coverage Report
+    runs-on: ubuntu-latest
+    needs: lint # Only run tests if lint passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        # Caching speeds up CI by reusing installed packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
         run: |
-          python -m pip install -U pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest pytest-cov ruff
 
-      - name: Run tests
+      - name: Run tests with coverage
+        # --cov generates a coverage report
+        # --cov-report=term-missing shows which lines aren't tested
+        # --cov-fail-under=70 fails CI if coverage drops below 70%
         run: |
-          pytest -q
+          cd pipeline
+          python -m pytest ../tests/ \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=xml:../coverage.xml \
+            --cov-fail-under=70 \
+            -v
 
+      - name: Upload coverage report
+        # Saves coverage report as a downloadable artifact in GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 30
+
+  # ── JOB 3: DOCKER BUILD ───────────────────────────────────
   docker-build:
+    name: Docker Build
     runs-on: ubuntu-latest
     needs: tests
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Build Docker image
+        run: docker build -t pfqpa:${{ github.sha }} .
+
+      - name: Test Docker image runs
         run: |
-          docker build -t pfqpa:ci .
+          docker run --rm pfqpa:${{ github.sha }} python -c "
+          import pandas, sklearn, numpy, scipy
+          print('All core imports successful')
+          "
+
+  # ── JOB 4: dbt VALIDATION ─────────────────────────────────
+  dbt-validate:
+    name: dbt Model Validation
+    runs-on: ubuntu-latest
+    needs: tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: pip install dbt-core dbt-duckdb
+
+      - name: Validate dbt models compile
+        # dbt parse checks SQL is valid without running queries
+        run: |
+          cd dbt_project
+          dbt parse --profiles-dir .
+        continue-on-error: true # Don't fail CI if dbt isn't fully set up yet

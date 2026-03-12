@@ -1,0 +1,36 @@
+name: "feature_quality_analytics"
+version: "1.0.0"
+config-version: 2
+
+# This tells dbt where your profile is (connection settings)
+profile: "feature_quality_analytics"
+
+# Where your model SQL files live
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+# Output folder (dbt compiles SQL here — don't edit manually)
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# Model configuration by layer
+models:
+  feature_quality_analytics:
+    # Bronze layer = raw data, materialized as views (fast, no storage)
+    bronze:
+      +materialized: view
+      +schema: bronze
+      +tags: ["bronze", "raw"]
+
+    # Silver layer = cleaned data, materialized as tables (stored)
+    silver:
+      +materialized: table
+      +schema: silver
+      +tags: ["silver", "cleaned"]
+
+    # Gold layer = business-ready, materialized as tables
+    gold:
+      +materialized: table
+      +schema: gold
+      +tags: ["gold", "analytics"]

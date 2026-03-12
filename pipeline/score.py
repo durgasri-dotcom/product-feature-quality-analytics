@@ -1,39 +1,48 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Tuple, Dict, Any
 import json
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
+import joblib
 import numpy as np
 import pandas as pd
-
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    roc_auc_score,
     accuracy_score,
-    confusion_matrix,
     classification_report,
+    confusion_matrix,
+    roc_auc_score,
 )
+from sklearn.model_selection import train_test_split
+
+logger = logging.getLogger(__name__)
+
+MODELS_PATH = Path("models")
+ARTIFACTS_PATH = Path("artifacts/reports")
+SILVER_PATH = Path("data/silver")
+
+MODELS_PATH.mkdir(parents=True, exist_ok=True)
+ARTIFACTS_PATH.mkdir(parents=True, exist_ok=True)
+SILVER_PATH.mkdir(parents=True, exist_ok=True)
 
 
-# ---------------- Config ----------------
 @dataclass
 class MLConfig:
     label_col: str = "is_high_risk"
-    feature_cols: Tuple[str, ...] = ("avg_latency", "crash_rate", "avg_feedback", "usage_count")
+    feature_cols: Tuple[str, ...] = (
+        "avg_latency", "crash_rate", "avg_feedback", "usage_count"
+    )
     test_size: float = 0.2
     random_state: int = 42
     n_estimators: int = 200
-    max_depth: int | None = None
+    max_depth: Optional[int] = None
 
 
 def create_target(df: pd.DataFrame, config: MLConfig) -> pd.DataFrame:
-    """
-    Create a binary target label for model training.
-    We mark 'high risk' features based on crash_rate + latency + feedback.
-    """
     required = set(config.feature_cols)
     missing = [c for c in required if c not in df.columns]
     if missing:
@@ -53,100 +62,162 @@ def create_target(df: pd.DataFrame, config: MLConfig) -> pd.DataFrame:
     return df
 
 
-def train_model(df: pd.DataFrame, config: MLConfig) -> Tuple[RandomForestClassifier, Dict[str, Any]]:
-    """
-    Train a baseline RandomForest model and return metrics.
-    """
+def train_model(
+    df: pd.DataFrame,
+    config: MLConfig,
+) -> Tuple[RandomForestClassifier, Dict[str, Any]]:
     df = df.copy()
-
-    df[list(config.feature_cols)] = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan)
-    df[list(config.feature_cols)] = df[list(config.feature_cols)].fillna(0)
+    df[list(config.feature_cols)] = (
+        df[list(config.feature_cols)]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+    )
 
     X = df[list(config.feature_cols)]
     y = df[config.label_col].astype(int)
 
-    
     stratify = y if y.nunique() > 1 else None
-
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=config.test_size, random_state=config.random_state, stratify=stratify
+        X, y,
+        test_size=config.test_size,
+        random_state=config.random_state,
+        stratify=stratify,
     )
 
     model = RandomForestClassifier(
         n_estimators=config.n_estimators,
         random_state=config.random_state,
         max_depth=config.max_depth,
-        n_jobs=-1,
+        class_weight="balanced",
     )
     model.fit(X_train, y_train)
 
-    proba = model.predict_proba(X_test)[:, 1]
-    preds = (proba >= 0.5).astype(int)
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1]
 
     metrics = {
-        "auc": float(roc_auc_score(y_test, proba)) if len(np.unique(y_test)) > 1 else None,
-        "accuracy": float(accuracy_score(y_test, preds)),
-        "confusion_matrix": confusion_matrix(y_test, preds).tolist(),
-        "classification_report": classification_report(y_test, preds, output_dict=True),
-        "n_train": int(len(X_train)),
-        "n_test": int(len(X_test)),
-        "features": list(config.feature_cols),
-        "label_col": config.label_col,
+        "accuracy": float(accuracy_score(y_test, y_pred)),
+        "roc_auc": float(roc_auc_score(y_test, y_proba)) if y.nunique() > 1 else 0.0,
+        "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
+        "classification_report": classification_report(y_test, y_pred, output_dict=True),
+        "train_rows": len(X_train),
+        "test_rows": len(X_test),
+        "feature_cols": list(config.feature_cols),
+        "run_timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    logger.info(
+        f"Model trained | AUC={metrics['roc_auc']:.4f} | "
+        f"Accuracy={metrics['accuracy']:.4f} | "
+        f"Train={metrics['train_rows']} | Test={metrics['test_rows']}"
+    )
+
+    try:
+        from mlflow_tracking.mlflow_logger import log_training_run
+        fi_df = pd.DataFrame({
+            "feature": list(config.feature_cols),
+            "importance": model.feature_importances_,
+        }).sort_values("importance", ascending=False)
+        log_training_run(model, metrics, config, fi_df, run_name="auto_run")
+    except Exception as e:
+        logger.debug(f"MLflow logging skipped: {e}")
 
     return model, metrics
 
 
-def score_dataframe(df: pd.DataFrame, model: RandomForestClassifier, config: MLConfig) -> pd.DataFrame:
+def compute_shap_values(model, df, config):
     """
-    Add model risk score predictions to the dataframe.
+    Compute SHAP feature importance values.
+    Handles MLConfig dataclass OR plain dict for config.
     """
+    try:
+        import shap
+
+        
+        if hasattr(config, "feature_cols"):
+            feature_cols = list(config.feature_cols)
+        elif isinstance(config, dict):
+            feature_cols = config.get("feature_cols", [])
+        else:
+            feature_cols = []
+
+        
+        fallback_cols = [
+            "avg_latency", "crash_rate", "avg_feedback", "usage_count",
+            "avg_latency_ms", "avg_error_count", "avg_feedback_score",
+            "quality_score", "session_quality_index",
+        ]
+        if not feature_cols:
+            feature_cols = fallback_cols
+
+        
+        feature_cols = [c for c in feature_cols if c in df.columns]
+
+        if not feature_cols:
+            logger.warning("SHAP skipped: no valid feature columns found in DataFrame")
+            return pd.DataFrame()
+
+        X = df[feature_cols].replace([np.inf, -np.inf], np.nan).fillna(0)
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+
+        # Handle list output (one array per class) from RandomForest
+        if isinstance(shap_values, list):
+            shap_array = shap_values[1]  # class=1 (high risk)
+        else:
+            shap_array = shap_values
+
+        # Handle 3D array (n_samples, n_features, n_classes)
+        if shap_array.ndim == 3:
+            shap_array = shap_array[:, :, 1]
+
+        #  guaranteed 2D → mean across rows → 1D
+        mean_abs = np.abs(shap_array).mean(axis=0)
+
+        mean_shap = pd.DataFrame({
+            "feature": feature_cols,
+            "mean_abs_shap": mean_abs.tolist(),  # .tolist() ensures 1D Python list
+        }).sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+
+        logger.info(f"SHAP complete | top feature: {mean_shap.iloc[0]['feature']}")
+        return mean_shap
+
+    except Exception as e:
+        logger.warning(f"SHAP skipped: {e}")
+        return pd.DataFrame()
+
+
+def score_dataframe(
+    df: pd.DataFrame,
+    model: RandomForestClassifier,
+    config: MLConfig,
+) -> pd.DataFrame:
     df = df.copy()
     X = df[list(config.feature_cols)].replace([np.inf, -np.inf], np.nan).fillna(0)
+    df["risk_probability"] = model.predict_proba(X)[:, 1]
+    df["risk_label"] = model.predict(X)
 
-    df["risk_score"] = model.predict_proba(X)[:, 1]
-    df["risk_bucket"] = pd.cut(
-        df["risk_score"],
-        bins=[-0.01, 0.33, 0.66, 1.01],
-        labels=["low", "medium", "high"],
-    )
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    silver_partition = SILVER_PATH / f"date={today}"
+    silver_partition.mkdir(parents=True, exist_ok=True)
+    silver_path = silver_partition / "scored_features.parquet"
+    df.to_parquet(silver_path, index=False, engine="pyarrow")
+    logger.info(f"Silver layer saved → {silver_path}")
+
     return df
 
 
 def save_artifacts(
     model: RandomForestClassifier,
     metrics: Dict[str, Any],
-    df_scored: pd.DataFrame,
-    config: MLConfig,
-    artifacts_dir: str = "artifacts",
+    feature_importance: pd.DataFrame,
 ) -> None:
-    """
-    Save model + metrics + feature importance + baseline stats.
-    """
-    import joblib
+    joblib.dump(model, MODELS_PATH / "risk_model.joblib")
 
-    base = Path(artifacts_dir)
-    (base / "models").mkdir(parents=True, exist_ok=True)
-    (base / "reports").mkdir(parents=True, exist_ok=True)
+    with open(ARTIFACTS_PATH / "metrics.json", "w") as f:
+        json.dump(metrics, f, indent=2, default=str)
 
-    # Save model
-    model_path = base / "models" / "risk_model.joblib"
-    joblib.dump(model, model_path)
+    feature_importance.to_csv(ARTIFACTS_PATH / "feature_importance.csv", index=False)
 
-    # Save metrics JSON
-    metrics_path = base / "reports" / "metrics.json"
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=2)
-
-    # Save feature importance
-    importances = getattr(model, "feature_importances_", None)
-    if importances is not None:
-        fi = pd.DataFrame(
-            {"feature": list(config.feature_cols), "importance": importances}
-        ).sort_values("importance", ascending=False)
-        fi.to_csv(base / "reports" / "feature_importance.csv", index=False)
-
-    # Save baseline stats for drift
-    baseline = df_scored[list(config.feature_cols)].describe().to_dict()
-    with open(base / "reports" / "baseline_stats.json", "w", encoding="utf-8") as f:
-        json.dump(baseline, f, indent=2)
+    logger.info(f"Artifacts saved → {MODELS_PATH} and {ARTIFACTS_PATH}")

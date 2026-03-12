@@ -3,10 +3,10 @@ import pandas as pd
 def aggregate_daily(df):
     df = df.copy()
 
-    # Ensure timestamp is datetime
+    # Ensuring timestamp is datetime
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-    # Create daily grain column
+    # Creating daily grain column
     df["date"] = df["timestamp"].dt.date.astype(str)
 
     aggregated = (
