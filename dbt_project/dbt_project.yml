@@ -1,16 +1,16 @@
 name: "feature_quality_analytics"
+description: "Transforms raw feature telemetry into Bronze/Silver/Gold layers using DuckDB"
 version: "1.0.0"
 config-version: 2
 
-# This tells dbt where your profile is (connection settings)
 profile: "feature_quality_analytics"
 
-# Where your model SQL files live
+# Paths where model SQL files live
 model-paths: ["models"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
 
-# Output folder (dbt compiles SQL here — don't edit manually)
+# Output folder
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
