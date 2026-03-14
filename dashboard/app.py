@@ -278,11 +278,11 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "⚡  Overview",
-    "🔍  Feature Deep Dive",
-    "📊  Model Intelligence",
-    "🌊  Drift Monitor",
-    "🏗️  Pipeline Status",
+    "  Overview",
+    "  Feature Deep Dive",
+    "  Model Intelligence",
+    "  Drift Monitor",
+    "  Pipeline Status",
 ])
 
 # ══════════════════════════════════════════════════════════════
