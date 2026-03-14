@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Imports  ──────────────────────────
+# ── Imports ───────────────────────────────────────────────────
 from ingest import load_raw_data
 from validate import validate_schema
 from transform import engineer_features
@@ -33,13 +33,13 @@ from monitoring.run_report import save_run_report
 
 import pandas as pd
 
-# ── Config  ───────────────────────────
+# ── Config ────────────────────────────────────────────────────
 RAW_PATH = "data/raw/product_logs.csv"
 OUTPUT_PATH = "data/processed/feature_metrics.csv"
 
 
 def log_data_profile(df):
-    """Your original function — kept exactly the same."""
+    """Log basic data profile stats for the ingested DataFrame."""
     logger.info(f"Row count: {len(df)}")
     logger.info(f"Column count: {len(df.columns)}")
     logger.info(f"Columns: {list(df.columns)}")
@@ -52,13 +52,16 @@ def log_data_profile(df):
 
 
 def run():
+    # FIX 1: Initialize runtime and rows_processed before the try block
+    # so the except block can always reference them safely.
     start_time = time.time()
+    runtime = 0.0
+    rows_processed = 0
 
     try:
         logger.info(f"Pipeline started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         # ── STEP 1: Ingestion ─────────────────────────────────
-        
         logger.info("---------- STEP 1: INGESTION ----------")
         df = load_raw_data(RAW_PATH)
         df = validate_schema(df, stage="raw")
@@ -66,7 +69,6 @@ def run():
         log_data_profile(df)
 
         # ── STEP 2: Baseline + Drift Detection ───────────────
-        
         logger.info("---------- STEP 2: DRIFT DETECTION ----------")
         baseline = load_baseline()
         current_stats = compute_baseline(df)
@@ -87,7 +89,6 @@ def run():
                 logger.info("No significant data drift detected.")
 
         # ── STEP 3: Data Quality Checks ──────────────────────
-        
         logger.info("---------- STEP 3: DATA QUALITY ----------")
         quality_report = run_great_expectations_suite(df)
         logger.info(
@@ -95,7 +96,6 @@ def run():
             f"passed={quality_report['passed']}/{quality_report['total_checks']}"
         )
 
-        
         check_null_rates(df)
         logger.info("Null rate validation passed")
 
@@ -103,13 +103,11 @@ def run():
         logger.info("Latency threshold validation passed")
 
         # ── STEP 4: Feature Engineering ──────────────────────
-        
         logger.info("---------- STEP 4: FEATURE ENGINEERING ----------")
         df = engineer_features(df)
         logger.info("Feature engineering completed")
 
         # ── STEP 5: Aggregation ───────────────────────────────
-        
         logger.info("---------- STEP 5: AGGREGATION ----------")
         df = aggregate_daily(df)
         logger.info("Daily aggregation completed")
@@ -118,7 +116,6 @@ def run():
         logger.info("Processed schema validation passed")
 
         # ── STEP 6: ML Risk Scoring ───────────────────────────
-        
         logger.info("---------- STEP 6: ML RISK SCORING ----------")
         config = MLConfig()
         df = create_target(df, config)
@@ -131,7 +128,6 @@ def run():
         )
 
         # ── STEP 7: Save Artifacts ────────────────────────────
-    
         logger.info("---------- STEP 7: SAVE ARTIFACTS ----------")
         fi = pd.DataFrame({
             "feature": list(config.feature_cols),
@@ -142,31 +138,32 @@ def run():
         logger.info("Artifacts saved to /artifacts")
 
         # ── STEP 8: SHAP Explainability ───────────────────────
-        
         logger.info("---------- STEP 8: SHAP EXPLAINABILITY ----------")
         shap_df = compute_shap_values(model, df, config)
-        if shap_df is not None:
+        # FIX 2: Guard against both None and empty DataFrame before calling iloc[0]
+        if shap_df is not None and not shap_df.empty:
             logger.info(f"SHAP complete | top feature: {shap_df.iloc[0]['feature']}")
         else:
-            logger.info("SHAP skipped (run: pip install shap to enable)")
+            logger.warning("SHAP skipped or returned no results — run: pip install shap to enable")
 
         # ── STEP 9: Save Output ───────────────────────────────
-        
         logger.info("---------- STEP 9: SAVE OUTPUT ----------")
         os.makedirs("data/processed", exist_ok=True)
         df.to_csv(OUTPUT_PATH, index=False)
         logger.info(f"Processed data saved to {OUTPUT_PATH}")
 
+        # FIX 3: Capture runtime and rows_processed inside try so they're
+        # always up-to-date before the success log and run report.
+        rows_processed = int(len(df))
         runtime = round(time.time() - start_time, 2)
         logger.info(f"Pipeline runtime: {runtime} seconds")
         logger.info("========== PIPELINE COMPLETED SUCCESSFULLY ==========")
 
         # ── STEP 10: Run Report ───────────────────────────────
-        
         save_run_report({
             "status": "success",
             "run_timestamp": datetime.now(timezone.utc).isoformat(),
-            "rows_processed": int(len(df)),
+            "rows_processed": rows_processed,
             "output_path": OUTPUT_PATH,
             "runtime_seconds": runtime,
             "ml_auc": metrics.get("roc_auc"),
@@ -177,14 +174,19 @@ def run():
             "drift_detected": drift_report.get("overall_drift_detected", False),
         })
 
-       
-
     except Exception as e:
-        logger.info(f"Pipeline finished in {runtime:.2f}s — {rows_processed} rows processed")
+        # FIX 3 (continued): runtime and rows_processed are always defined now
+        # (initialized to 0.0 / 0 above), so this block never throws UnboundLocalError.
+        runtime = round(time.time() - start_time, 2)
+        # FIX 4: Changed logger.info → logger.error for the failure message
+        logger.error(f"Pipeline FAILED after {runtime:.2f}s — {rows_processed} rows processed")
         logger.error(f"Failure reason: {str(e)}", exc_info=True)
 
         save_run_report({
             "status": "failed",
+            "run_timestamp": datetime.now(timezone.utc).isoformat(),
+            "runtime_seconds": runtime,
+            "rows_processed": rows_processed,
             "error": str(e),
         })
         raise
