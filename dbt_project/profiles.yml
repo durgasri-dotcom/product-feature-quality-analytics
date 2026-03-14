@@ -3,5 +3,5 @@ feature_quality_analytics:
   outputs:
     dev:
       type: duckdb
-      path: "data/analytics.duckdb" # Local DuckDB file (created automatically)
+      path: "data/analytics.duckdb" # Local DuckDB file
       threads: 4
