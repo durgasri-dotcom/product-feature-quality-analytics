@@ -1,3 +1,5 @@
+# Logs to ./mlflow_runs by default.
+# Set MLFLOW_TRACKING_URI env variable to point to a remote server.
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -10,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 logger = logging.getLogger(__name__)
 
 # Where MLflow stores all experiment data
-MLFLOW_TRACKING_URI = "mlflow_runs"  # Local folder (no server needed)
+MLFLOW_TRACKING_URI = "mlflow_runs"  # Local folder 
 EXPERIMENT_NAME = "feature-quality-risk-scoring"
 
 
@@ -110,10 +112,10 @@ def log_training_run(
             "data_layer": "silver",
         })
 
-        logger.info(f"✅ MLflow run logged | run_id={run_id} | "
+        logger.info(f" MLflow run logged | run_id={run_id} | "
                    f"AUC={metric_map.get('roc_auc', 'N/A'):.4f}" 
                    if 'roc_auc' in metric_map else
-                   f"✅ MLflow run logged | run_id={run_id}")
+                   f" MLflow run logged | run_id={run_id}")
 
     return run_id
 
