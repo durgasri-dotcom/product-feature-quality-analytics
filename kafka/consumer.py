@@ -101,7 +101,7 @@ def consume_from_kafka(max_messages: int = 500, timeout_ms: int = 5000) -> list:
     batch = []
     BATCH_SIZE = 50  # Save to disk every 50 events (micro-batching)
 
-    logger.info(f"👂 Listening for events (max={max_messages}, timeout={timeout_ms}ms)...")
+    logger.info(f" Listening for events (max={max_messages}, timeout={timeout_ms}ms)...")
 
     try:
         for message in consumer:
@@ -113,7 +113,7 @@ def consume_from_kafka(max_messages: int = 500, timeout_ms: int = 5000) -> list:
             if len(batch) >= BATCH_SIZE:
                 save_to_bronze(batch)
                 batch = []
-                logger.info(f"📦 Progress: {len(events)}/{max_messages} events consumed")
+                logger.info(f" Progress: {len(events)}/{max_messages} events consumed")
 
             if len(events) >= max_messages:
                 break
@@ -137,7 +137,7 @@ def consume_from_csv_fallback(csv_path: str = "data/raw/product_logs.csv") -> li
     
     This means your pipeline still works perfectly without Kafka running.
     """
-    logger.info(f"📂 FALLBACK MODE: Reading from CSV → {csv_path}")
+    logger.info(f" FALLBACK MODE: Reading from CSV → {csv_path}")
     df = pd.read_csv(csv_path)
     events = df.to_dict(orient="records")
     save_to_bronze(events)
