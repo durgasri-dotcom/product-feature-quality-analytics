@@ -35,11 +35,6 @@ def compute_psi(baseline_series: pd.Series, current_series: pd.Series, bins: int
     PSI measures how much a variable's distribution has shifted
     between a baseline period and current period.
     
-    This is the STANDARD metric used by:
-    - Goldman Sachs for credit score monitoring
-    - Netflix for recommendation model health
-    - Google for ad ranking model stability
-    
     Args:
         baseline_series: The reference distribution (historical data)
         current_series: The current distribution (new data)
@@ -83,7 +78,6 @@ def run_ks_test(baseline_series: pd.Series, current_series: pd.Series) -> Dict:
     """
     Kolmogorov-Smirnov (KS) Test for distribution shift.
     
-    The KS test asks: "Are these two samples from the same distribution?"
     It returns:
     - statistic: How different the distributions are (0=same, 1=completely different)
     - p_value: Probability the difference is due to random chance
@@ -115,8 +109,8 @@ def run_ks_test(baseline_series: pd.Series, current_series: pd.Series) -> Dict:
         "drift_detected": p_value < KS_P_VALUE_THRESHOLD,
         "interpretation": (
             f"KS={ks_stat:.4f}, p={p_value:.4f} → "
-            + ("⚠️ Drift detected (p < 0.05)" if p_value < KS_P_VALUE_THRESHOLD
-               else "✅ No significant drift")
+            + (" Drift detected (p < 0.05)" if p_value < KS_P_VALUE_THRESHOLD
+               else " No significant drift")
         )
     }
 
@@ -225,11 +219,11 @@ def detect_data_drift(
 
     # Log summary
     if all_alerts:
-        logger.warning(f"⚠️  DRIFT DETECTED: {len(all_alerts)} alerts")
+        logger.warning(f"  DRIFT DETECTED: {len(all_alerts)} alerts")
         for a in all_alerts:
             logger.warning(f"   {a}")
     else:
-        logger.info("✅ No significant drift detected across all methods")
+        logger.info(" No significant drift detected across all methods")
 
     return report
 
