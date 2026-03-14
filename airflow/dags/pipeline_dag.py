@@ -9,7 +9,7 @@ from airflow.utils.dates import days_ago
 # DEFAULT ARGS — applied to every task in the DAG
 # ─────────────────────────────────────────────
 default_args = {
-    "owner": "abhigna",                    # Your name
+    "owner": "abhigna",                    
     "depends_on_past": False,              # Each run is independent
     "email_on_failure": False,             # Set to True + add email for alerts
     "email_on_retry": False,
@@ -18,15 +18,10 @@ default_args = {
     "start_date": days_ago(1),
 }
 
-# ─────────────────────────────────────────────
-# DAG DEFINITION
-# schedule_interval="0 6 * * *" means: run every day at 6:00 AM UTC
-# This is cron syntax: minute hour day month weekday
-# ─────────────────────────────────────────────
 dag = DAG(
     dag_id="feature_quality_analytics_pipeline",
     default_args=default_args,
-    description="Daily Feature Quality Analytics Pipeline — FAANG-level orchestration",
+    description="Daily Feature Quality Analytics Pipeline orchestration",
     schedule_interval="0 6 * * *",    # Every day at 6 AM UTC
     catchup=False,                     # Don't run missed historical runs
     tags=["analytics", "ml", "monitoring", "data-engineering"],
@@ -48,11 +43,6 @@ dag = DAG(
     """,
 )
 
-
-# ─────────────────────────────────────────────
-# TASK FUNCTIONS
-# Each function is one step in the pipeline.
-# Airflow runs them in order, handles retries if they fail.
 # ─────────────────────────────────────────────
 
 def task_ingest_data(**context):
