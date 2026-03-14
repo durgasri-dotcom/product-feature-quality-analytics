@@ -1,3 +1,5 @@
+# Simulates real-time product feature telemetry at ~1 event/sec.
+# Falls back to CSV replay mode if Kafka broker is unavailable.
 import json
 import random
 import time
@@ -15,14 +17,11 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# ─────────────────────────────────────────────
-# CONFIG — change KAFKA_BOOTSTRAP_SERVERS to
-# your Kafka server address if using real Kafka
-# ─────────────────────────────────────────────
+
 KAFKA_BOOTSTRAP_SERVERS = ["localhost:9092"]
 KAFKA_TOPIC = "feature-telemetry-events"
 
-# Simulated product features (like a real platform would have)
+# Simulated product features 
 FEATURE_NAMES = [
     "search_ranking",
     "recommendation_engine",
@@ -124,7 +123,7 @@ def produce_events(
     producer = create_kafka_producer()
     events_produced = []
 
-    logger.info(f"🚀 Starting event production: {num_events} events for topic '{KAFKA_TOPIC}'")
+    logger.info(f" Starting event production: {num_events} events for topic '{KAFKA_TOPIC}'")
 
     for i in range(num_events):
         event = generate_telemetry_event(feature_name)
