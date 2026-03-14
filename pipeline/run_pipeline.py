@@ -52,8 +52,7 @@ def log_data_profile(df):
 
 
 def run():
-    # FIX 1: Initialize runtime and rows_processed before the try block
-    # so the except block can always reference them safely.
+  
     start_time = time.time()
     runtime = 0.0
     rows_processed = 0
@@ -152,8 +151,7 @@ def run():
         df.to_csv(OUTPUT_PATH, index=False)
         logger.info(f"Processed data saved to {OUTPUT_PATH}")
 
-        # FIX 3: Capture runtime and rows_processed inside try so they're
-        # always up-to-date before the success log and run report.
+    
         rows_processed = int(len(df))
         runtime = round(time.time() - start_time, 2)
         logger.info(f"Pipeline runtime: {runtime} seconds")
@@ -175,8 +173,7 @@ def run():
         })
 
     except Exception as e:
-        # FIX 3 (continued): runtime and rows_processed are always defined now
-        # (initialized to 0.0 / 0 above), so this block never throws UnboundLocalError.
+
         runtime = round(time.time() - start_time, 2)
         # FIX 4: Changed logger.info → logger.error for the failure message
         logger.error(f"Pipeline FAILED after {runtime:.2f}s — {rows_processed} rows processed")
