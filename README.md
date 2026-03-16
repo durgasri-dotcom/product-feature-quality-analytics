@@ -113,7 +113,7 @@ make docker-up    # full stack
 3  Data Quality       12 Great Expectations checks, JSON report saved
 4  Feature Eng        12 derived features, saved to Silver layer
 5  Aggregation        Rolled up to feature-day grain (150 rows)
-6  ML Scoring         Random Forest, AUC=0.084, auto-logged to MLflow
+6  ML Scoring         Random Forest ·AUC=0.96 ·CV-AUC=0.93±0.04 ·auto-logged to MLflow
 7  Artifacts          model.pkl, metrics.json, feature_importance.csv
 8  SHAP               Per-feature attribution via TreeExplainer
 9  Export             feature_metrics_with_risk.csv, run_report.json
