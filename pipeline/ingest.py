@@ -24,10 +24,7 @@ GOLD_PATH = Path("data/gold")
 def load_raw_data(path: str) -> pd.DataFrame:
     """
     Load raw telemetry data from CSV (existing format).
-    
-    This is your original function — kept for backward compatibility.
-    After loading, we immediately save a Bronze copy in Parquet format.
-    
+
     Args:
         path: Path to your CSV file (e.g., "data/raw/product_logs.csv")
     
@@ -94,9 +91,7 @@ def load_bronze_data(date: Optional[str] = None) -> pd.DataFrame:
 def _save_to_bronze(df: pd.DataFrame, source: str = "csv") -> Path:
     """
     Internal: Save a DataFrame to the Bronze layer as Parquet.
-    
-    IMPORTANT: Bronze data is NEVER modified — raw as-is.
-    We just add metadata columns to track where it came from.
+
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     partition_path = BRONZE_PATH / f"date={today}"
@@ -122,7 +117,7 @@ def _save_to_bronze(df: pd.DataFrame, source: str = "csv") -> Path:
 def get_pipeline_metadata() -> dict:
     """
     Return metadata about available data layers.
-    Useful for the dashboard and run reports.
+
     """
     bronze_files = list(BRONZE_PATH.rglob("*.parquet"))
     silver_files = list(SILVER_PATH.rglob("*.parquet"))
