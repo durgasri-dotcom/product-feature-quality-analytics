@@ -2,7 +2,6 @@ import pandas as pd
 from pipeline.aggregate import aggregate_daily
 from pipeline.validate import validate_schema
 
-
 def test_aggregate_daily_produces_valid_schema():
 
     df = pd.DataFrame({
