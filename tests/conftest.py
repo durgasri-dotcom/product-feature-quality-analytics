@@ -1,7 +1,11 @@
 import pytest
 import pandas as pd
 import numpy as np
+import sys
+import os
 
+# Point to project root so 'from pipeline.x import y' works
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 @pytest.fixture
 def sample_raw_df():
