@@ -8,7 +8,7 @@ def _make_training_df(n: int = 200) -> pd.DataFrame:
         "crash_rate":      [0.01] * (n // 2) + [0.20] * (n - n // 2),
         "avg_feedback":    [4.7] * (n // 2) + [2.3] * (n - n // 2),
         "usage_count":     [1000] * (n // 2) + [200] * (n - n // 2),
-        "avg_error_count": [0.1] * (n // 2) + [3.5] * (n - n // 2),  # added
+        "avg_error_count": [0.1] * (n // 2) + [3.5] * (n - n // 2),  
     })
 
 
