@@ -15,9 +15,12 @@ logs/
 # Artifacts 
 artifacts/models/
 artifacts/reports/*.json
+artifacts/reports/data_quality/
 
 # Processed data
 data/processed/
+data/bronze/
+data/silver/
 
 # OS files
 .DS_Store
