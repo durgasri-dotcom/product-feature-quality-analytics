@@ -7,5 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Default: run pipeline (you can override)
+# Default: run pipeline
 CMD ["python", "pipeline/run_pipeline.py"]
