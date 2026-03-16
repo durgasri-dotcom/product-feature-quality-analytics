@@ -2,7 +2,6 @@ import pandas as pd
 import pytest
 from pipeline.quality_checks import check_null_rates
 
-
 def test_check_null_rates_passes_when_valid():
     df = pd.DataFrame({
         "latency_ms": [100, 200, 300],
