@@ -1,7 +1,6 @@
 import pandas as pd
 from pipeline.score import MLConfig, create_target, train_model, score_dataframe
 
-
 def _make_training_df(n: int = 200) -> pd.DataFrame:
     return pd.DataFrame({
         "avg_latency": list(range(50, 50 + n)),
