@@ -2,7 +2,6 @@ import pandas as pd
 import pytest
 from pipeline.validate import validate_schema
 
-
 def test_validate_schema_raw_passes_with_required_columns():
     df = pd.DataFrame({
         "user_id": [1],
