@@ -1,0 +1,6 @@
+[lint]
+ignore = [
+    "F401",  # unused imports
+    "F841",  # unused variables
+    "E402",  # module level import not at top
+]
