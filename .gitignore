@@ -22,6 +22,9 @@ data/processed/
 data/bronze/
 data/silver/
 
+# dbt
+dbt_project/models/gold/
+
 # OS files
 .DS_Store
 Thumbs.db
