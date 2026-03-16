@@ -48,7 +48,7 @@ help:
 # ── SETUP ──────────────────────────────────────────────────
 install:
 	pip install -r requirements.txt
-	@echo "✅ All dependencies installed"
+	@echo " All dependencies installed"
 
 dirs:
 	mkdir -p data/raw data/bronze data/silver data/gold \
@@ -56,17 +56,17 @@ dirs:
 	         models mlflow_runs logs \
 	         kafka airflow/dags dbt_project/models/{bronze,silver,gold} \
 	         mlflow_tracking infrastructure/prometheus
-	@echo "✅ All directories created"
+	@echo " All directories created"
 
 # ── PIPELINE ───────────────────────────────────────────────
 run: dirs
 	cd pipeline && python run_pipeline.py
-	@echo "✅ Pipeline complete"
+	@echo " Pipeline complete"
 
 # ── TESTING ────────────────────────────────────────────────
 test:
 	cd pipeline && python -m pytest ../tests/ -v
-	@echo "✅ All tests passed"
+	@echo " All tests passed"
 
 test-cov:
 	cd pipeline && python -m pytest ../tests/ \
@@ -74,33 +74,33 @@ test-cov:
 		--cov-report=term-missing \
 		--cov-fail-under=70 \
 		-v
-	@echo "✅ Coverage report complete"
+	@echo " Coverage report complete"
 
 lint:
 	ruff check pipeline/ tests/ kafka/ mlflow_tracking/ --ignore E501
-	@echo "✅ Lint check passed"
+	@echo " Lint check passed"
 
 format:
 	ruff format pipeline/ tests/ kafka/ mlflow_tracking/
-	@echo "✅ Code formatted"
+	@echo " Code formatted"
 
 # ── KAFKA ──────────────────────────────────────────────────
 kafka-produce:
 	python kafka/producer.py
-	@echo "✅ Events produced"
+	@echo " Events produced"
 
 kafka-consume:
 	python kafka/consumer.py
-	@echo "✅ Events consumed to Bronze layer"
+	@echo " Events consumed to Bronze layer"
 
 # ── DBT ────────────────────────────────────────────────────
 dbt-run:
 	cd dbt_project && dbt run --profiles-dir .
-	@echo "✅ dbt models built (Bronze → Silver → Gold)"
+	@echo " dbt models built (Bronze → Silver → Gold)"
 
 dbt-test:
 	cd dbt_project && dbt test --profiles-dir .
-	@echo "✅ dbt tests passed"
+	@echo " dbt tests passed"
 
 dbt-docs:
 	cd dbt_project && dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
@@ -114,12 +114,12 @@ mlflow-ui:
 # ── DOCKER ─────────────────────────────────────────────────
 docker-build:
 	docker build -t pfqpa:latest .
-	@echo "✅ Docker image built"
+	@echo " Docker image built"
 
 docker-up:
 	docker-compose up -d
 	@echo ""
-	@echo "✅ All services started:"
+	@echo " All services started:"
 	@echo "   Streamlit Dashboard  → http://localhost:8501"
 	@echo "   MLflow UI            → http://localhost:5000"
 	@echo "   Prometheus           → http://localhost:9090"
@@ -141,4 +141,4 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -name "*.egg-info" -exec rm -rf {} +
-	@echo "✅ Cleaned up cache files"
+	@echo " Cleaned up cache files"
