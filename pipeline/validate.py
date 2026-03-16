@@ -47,14 +47,6 @@ def validate_schema(df: pd.DataFrame, stage: str = "raw") -> pd.DataFrame:
     """
     Validates DataFrame schema and data quality.
 
-    YOUR ORIGINAL: Only checked if columns existed.
-
-    ELITE UPGRADE: Now also checks:
-    - Column data types are correct
-    - Values are within valid ranges
-    - No fully empty columns
-    - Row count is above minimum
-
     Args:
         df: DataFrame to validate
         stage: "raw" or "processed"
