@@ -74,9 +74,7 @@ cd product-feature-quality-analytics
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-pip install pandas numpy scikit-learn scipy pyarrow streamlit plotly \
-            joblib structlog kafka-python mlflow great-expectations \
-            dbt-core dbt-duckdb duckdb pytest pytest-cov
+pip install -r requirements.txt
 
 python pipeline/run_pipeline.py
 streamlit run dashboard/app.py
@@ -115,7 +113,7 @@ make docker-up    # full stack
 3  Data Quality       12 Great Expectations checks, JSON report saved
 4  Feature Eng        12 derived features, saved to Silver layer
 5  Aggregation        Rolled up to feature-day grain (150 rows)
-6  ML Scoring         Random Forest, AUC=1.000, auto-logged to MLflow
+6  ML Scoring         Random Forest, AUC=0.084, auto-logged to MLflow
 7  Artifacts          model.pkl, metrics.json, feature_importance.csv
 8  SHAP               Per-feature attribution via TreeExplainer
 9  Export             feature_metrics_with_risk.csv, run_report.json
@@ -211,5 +209,5 @@ Every push to `main` runs:
 
 **Sri Durga Abhigna Tanguturi**
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/YOUR_PROFILE)
-[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/YOUR_USERNAME)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/durgasritanguturi)
+[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/durgasri-dotcom)
