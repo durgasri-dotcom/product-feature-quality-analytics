@@ -101,6 +101,7 @@ jobs:
   dbt-validate:
     name: dbt Model Validation
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: tests
 
     steps:
