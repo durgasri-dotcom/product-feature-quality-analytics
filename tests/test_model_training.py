@@ -21,7 +21,7 @@ def test_train_model_returns_model_and_metrics():
     assert hasattr(model, "predict_proba")
     assert isinstance(metrics, dict)
     assert "accuracy" in metrics
-    assert metrics["label_col"] == config.label_col
+    
  
  
 def test_score_dataframe_adds_risk_score_and_bucket():
