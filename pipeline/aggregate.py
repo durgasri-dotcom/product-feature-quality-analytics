@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def aggregate_daily(df):
     df = df.copy()
 
@@ -16,6 +17,7 @@ def aggregate_daily(df):
             crash_rate=("crash_flag", "mean"),
             avg_feedback=("feedback_score", "mean"),
             usage_count=("user_id", "count"),
+            avg_error_count=("error_count", "mean"),  # added for ML risk scoring
         )
     )
 
