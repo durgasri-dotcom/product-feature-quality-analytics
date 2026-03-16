@@ -12,10 +12,7 @@ SILVER_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Elite transforms raw telemetry into structured ML-ready features.
-    Derives time-based signals, latency buckets, anomaly flags, and session quality metrics from event level logs.
-    """
+   
     if df.empty:
         logger.warning("transform_skipped: empty DataFrame received")
         return df
