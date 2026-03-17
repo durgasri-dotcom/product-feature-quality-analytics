@@ -7,6 +7,12 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-RF_Classifier-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
 
+## Live Demo
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://feature-quality-analytics.streamlit.app)
+
+---
+
 A data engineering and ML platform that monitors product feature reliability, scores risk, and surfaces performance regressions before they reach users.
 
 ---
