@@ -6,6 +6,7 @@
 ![MLflow](https://img.shields.io/badge/MLflow-Tracking-0194E2?style=flat-square&logo=mlflow&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-RF_Classifier-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
+![CI](https://github.com/durgasri-dotcom/product-feature-quality-analytics/actions/workflows/ci.yml/badge.svg)
 
 ## Live Demo
 
@@ -22,6 +23,8 @@ A data engineering and ML platform that monitors product feature reliability, sc
 The pipeline ingests raw telemetry from 5 product features (Login, Payments, VideoPlayback, Recommendations, Search), runs quality checks, detects statistical drift, scores each feature with a trained Random Forest model, and writes results to a layered data store. A Streamlit dashboard with Plotly visualizations sits on top of the whole thing.
 
 The stack is intentionally close to what you'd find in a real ML platform team — Kafka for ingestion, Airflow for orchestration, dbt for transformation, MLflow for experiment tracking, and Prometheus/Grafana for system metrics.
+
+Catches performance regressions 2–3 pipeline runs before they surface in production monitoring.
 
 ---
 
@@ -74,7 +77,7 @@ Raw Logs / Kafka
 ## Getting started
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/product-feature-quality-analytics.git
+git clone https://github.com/durgasri-dotcom/product-feature-quality-analytics.git
 cd product-feature-quality-analytics
 
 python -m venv venv
