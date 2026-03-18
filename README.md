@@ -20,7 +20,7 @@ A data engineering and ML platform that monitors product feature reliability, sc
 
 ## What it does
 
-The pipeline ingests raw telemetry from 5 product features (Login, Payments, VideoPlayback, Recommendations, Search), runs quality checks, detects statistical drift, scores each feature with a trained Random Forest model, and writes results to a layered data store. A Streamlit dashboard with Plotly visualizations sits on top of the whole thing.
+The pipeline ingests 1 million real eCommerce user sessions from Kaggle (October 2019), maps them to 5 product feature categories (Login, Payments, VideoPlayback, Recommendations, Search), and blends them with synthetic reliability signals to simulate a production telemetry stream.
 
 The stack is intentionally close to what you'd find in a real ML platform team — Kafka for ingestion, Airflow for orchestration, dbt for transformation, MLflow for experiment tracking, and Prometheus/Grafana for system metrics.
 
@@ -117,7 +117,7 @@ make docker-up    # full stack
 ## Pipeline steps
 
 ```
-1  Ingestion          5,026 rows loaded, Bronze Parquet saved (partitioned by date)
+1  Ingestion          1,000,000 rows loaded (Kaggle eCommerce, Oct 2019), Bronze Parquet saved partitioned by date
 2  Drift Detection    PSI + KS Test + Δ% — alerts if any threshold exceeded
 3  Data Quality       12 Great Expectations checks, JSON report saved
 4  Feature Eng        12 derived features, saved to Silver layer
