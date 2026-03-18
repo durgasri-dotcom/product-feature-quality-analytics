@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "run_timestamp": "2026-03-18T00:52:07.731969+00:00",
+  "rows_processed": 300,
+  "output_path": "data/processed/feature_metrics.csv",
+  "runtime_seconds": 21.02,
+  "ml_auc": 0.9679075738125803,
+  "ml_accuracy": 0.9166666666666666,
+  "quality_score_pct": 100.0,
+  "quality_checks_passed": 12,
+  "drift_alerts": 0,
+  "drift_detected": false,
+  "timestamp": "2026-03-18T00:52:07.731969Z"
+}
