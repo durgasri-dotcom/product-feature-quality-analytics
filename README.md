@@ -22,7 +22,7 @@ A data engineering and ML platform that monitors product feature reliability, sc
 
 The pipeline ingests 1 million real eCommerce user sessions from Kaggle (October 2019), maps them to 5 product feature categories (Login, Payments, VideoPlayback, Recommendations, Search), and blends them with synthetic reliability signals to simulate a production telemetry stream.
 
-The stack is intentionally close to what you'd find in a real ML platform team — Kafka for ingestion, Airflow for orchestration, dbt for transformation, MLflow for experiment tracking, and Prometheus/Grafana for system metrics.
+The stack is intentionally close to what you'd find in a real ML platform team Kafka for ingestion, Airflow for orchestration, dbt for transformation, MLflow for experiment tracking, and Prometheus/Grafana for system metrics.
 
 Catches performance regressions 2–3 pipeline runs before they surface in production monitoring.
 
